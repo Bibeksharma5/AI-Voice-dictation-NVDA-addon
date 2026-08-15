@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI voice dictation</title>
+<style>
+body {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 1em;
+	line-height: 1.5;
+	max-width: 60em;
+	margin: 1.5em auto;
+	padding: 0 1em;
+	color: #1a1a1a;
+	background: #ffffff;
+}
+h1 {
+	font-size: 1.6em;
+	border-bottom: 2px solid #ccc;
+	padding-bottom: 0.2em;
+}
+h2 {
+	font-size: 1.25em;
+	margin-top: 1.6em;
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 0.15em;
+}
+table {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 0.5em 0;
+}
+th, td {
+	border: 1px solid #bbb;
+	padding: 0.4em 0.6em;
+	text-align: left;
+	vertical-align: top;
+}
+th {
+	background: #f0f0f0;
+}
+kbd {
+	background: #f4f4f4;
+	border: 1px solid #bbb;
+	border-radius: 3px;
+	padding: 0.05em 0.35em;
+	font-family: Consolas, "Courier New", monospace;
+}
+code {
+	font-family: Consolas, "Courier New", monospace;
+	background: #f4f4f4;
+	padding: 0.05em 0.3em;
+	border-radius: 3px;
+}
+ul {
+	margin: 0.3em 0 0.8em 0;
+}
+li {
+	margin: 0.25em 0;
+}
+</style>
+</head>
+<body>
+
+<h1>AI voice dictation</h1>
+
+<p>AI voice dictation is a comprehensive, all-in-one voice toolkit for NVDA,
+powered by Google Gemini, that turns your speech into polished text and
+supercharges everyday productivity. Dictate naturally into any edit box,
+transcribe audio files directly from File Explorer, refine clipboard text with
+professional spelling and grammar correction, enrich your writing with tasteful
+emoji formatting, and translate instantly into more than 100 languages.</p>
+<p>Every feature is built around accessibility and efficiency: a single layered
+command system (<kbd>NVDA+Alt+Space</kbd>) puts the entire toolkit at your
+fingertips, multiple Gemini API keys are rotated automatically whenever one is
+exhausted, dictation can be paused and resumed without losing your place, any
+running operation can be cancelled with a single key, current status is always
+one keystroke away, and the last dictation recording can be re-run if a network
+or API failure interrupts it. Whether you are drafting documents, composing
+messages, working with audio recordings, or communicating across languages, AI
+voice dictation is your voice-powered productivity companion, made and
+maintained in Nepal.</p>
+
+<ul>
+<li><strong>Author:</strong> Bibek Sharma Dhakal</li>
+<li><strong>Version:</strong> 2026.1</li>
+<li><strong>Minimum tested NVDA version:</strong> 2026.1</li>
+<li><strong>Last tested NVDA version:</strong> 2026.4</li>
+</ul>
+
+<h2>Features</h2>
+<ul>
+<li>Dictate directly into any edit box using your microphone and Google Gemini.</li>
+<li>Transcribe an audio file selected in File Explorer; the result opens in a
+read-only &ldquo;Transcribed text&rdquo; window with Copy (Alt+C) and Close buttons
+(Escape also closes it).</li>
+<li>Refine (correct spelling and grammar of) the text currently on the clipboard.</li>
+<li>Format clipboard text with emojis.</li>
+<li>Translate clipboard text into any of 100+ languages.</li>
+<li>Multiple Gemini API keys can be entered, separated by commas; if one key fails
+(for example because it is exhausted), the next key is tried automatically.</li>
+<li>Pause and resume dictation, cancel running operations, check operation status,
+re-dictate the last recording, and more &mdash; all from one command layer.</li>
+</ul>
+
+<h2>Requirements</h2>
+<ul>
+<li>NVDA 2026.1 or later.</li>
+<li>One or more Google Gemini API keys.
+<ul>
+<li>Create a key at <a href="https://aistudio.google.com/apikey">https://aistudio.google.com/apikey</a>
+(or the Google AI for Developers console).</li>
+<li>The API keys are stored in your NVDA configuration and are hidden by default
+(see &ldquo;Show API&rdquo; below).</li>
+</ul></li>
+</ul>
+
+<h2>Getting started</h2>
+<ol>
+<li>Install the add-on and restart NVDA.</li>
+<li>Open NVDA Preferences &gt; Settings and open the <strong>AI voice dictation</strong>
+category.</li>
+<li>Paste your Gemini API key(s) into the <strong>Gemini API keys (separatable with
+comma)</strong> field. Multiple keys are separated with a comma, for example:
+<code>AIza...1111, AIza...2222</code>.</li>
+<li>Choose a dictation model: <strong>dictation lite</strong> (Gemini 3.5 Flash Lite) or
+<strong>dictation flash</strong> (Gemini 3.5 Flash).</li>
+<li>Optionally choose a target language and enable translation / AI processing /
+emoji formatting.</li>
+<li>Press OK.</li>
+</ol>
+
+<h2>Commands</h2>
+
+<p>The add-on adds one command in NVDA's Input Gestures dialog, under the
+<strong>AI voice dictation</strong> category:</p>
+
+<ul>
+<li><strong>Enter AI voice dictation command mode</strong> &mdash; default gesture:
+<kbd>NVDA+Alt+Space</kbd></li>
+</ul>
+
+<p>Pressing <kbd>NVDA+Alt+Space</kbd> makes NVDA announce &ldquo;Entering AI voice
+dictation command mode&rdquo;. The next single key press is then interpreted as a
+command:</p>
+
+<table>
+<thead>
+<tr><th>Key</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><kbd>d</kbd></td>
+<td>Dictation. If you are not on an edit box, NVDA announces &ldquo;Please go to any
+edit box for dictation&rdquo; and nothing is recorded. If you are on an edit box,
+recording starts immediately (&ldquo;Listening...&rdquo;). Press <kbd>NVDA+Alt+Space</kbd>
+followed by <kbd>d</kbd> again to stop recording and process the dictation. The
+recognized text is pasted directly into the current edit box and is also placed on
+the clipboard, so you can paste it elsewhere with Ctrl+V.</td>
+</tr>
+<tr>
+<td><kbd>b</kbd></td>
+<td>Transcribe an audio file. Focus a file (WAV, MP3, M4A, OGG, FLAC, AAC, etc.) in
+File Explorer and press <kbd>NVDA+Alt+Space</kbd> followed by <kbd>b</kbd>. NVDA
+announces &ldquo;Transcribing audio...&rdquo; and, when finished, opens a read-only window
+titled &ldquo;Transcribed text&rdquo; containing the transcription. Use the Copy button (or
+Alt+C) to copy the text to the clipboard (NVDA announces &ldquo;Transcription copied to
+clipboard.&rdquo;), and the Close button or Escape (or the window's close button) to
+close the window. If the focus is not on a file in File Explorer, NVDA announces
+&ldquo;Please focus on any audio file in file explorer and try again.&rdquo;. If a file is
+selected but it is not a supported audio type, NVDA announces &ldquo;File not
+supported.&rdquo; and nothing is uploaded.</td>
+</tr>
+<tr>
+<td><kbd>a</kbd></td>
+<td>Refine the clipboard text (spelling and grammar). The refined text is copied
+back to the clipboard.</td>
+</tr>
+<tr>
+<td><kbd>e</kbd></td>
+<td>Format the clipboard text with emojis. The result is copied back to the
+clipboard.</td>
+</tr>
+<tr>
+<td><kbd>t</kbd></td>
+<td>Translate the clipboard text to the language selected in settings. The
+translation is copied back to the clipboard.</td>
+</tr>
+<tr>
+<td><kbd>c</kbd></td>
+<td>Cancel the currently running operation. NVDA announces the cancelled job (e.g.
+&ldquo;Dictation cancelled.&rdquo;, &ldquo;Transcription cancelled.&rdquo;, &ldquo;Refining cancelled.&rdquo;,
+&ldquo;Translation cancelled.&rdquo;, &ldquo;Emoji formatting cancelled.&rdquo;). Cancelling a
+dictation discards the temporary audio, so dictation must be started again from the
+beginning. If nothing is running, NVDA announces &ldquo;No job to cancel.&rdquo;</td>
+</tr>
+<tr>
+<td><kbd>p</kbd></td>
+<td>Pause or resume dictation. While dictation is recording, pressing <kbd>p</kbd>
+announces &ldquo;Dictation paused.&rdquo; and the microphone stops (nothing is recorded while
+paused). Pressing <kbd>p</kbd> again announces &ldquo;Dictation resumed.&rdquo; and recording
+continues; the audio after resuming is appended to the part recorded before the
+pause, and the whole thing is transcribed together when dictation finishes. If
+dictation is not running, NVDA announces &ldquo;Dictation not running.&rdquo;</td>
+</tr>
+<tr>
+<td><kbd>Enter</kbd></td>
+<td>Re-dictate the last dictation. Every finished dictation recording is kept, so if
+a dictation fails (for example because of a network problem or an exhausted API
+key), pressing <kbd>NVDA+Alt+Space</kbd> followed by <kbd>Enter</kbd> sends the saved
+recording through the dictation pipeline again &mdash; no need to dictate again. The
+re-dictated text is pasted into the edit box and processed according to the
+settings checkboxes, just like a normal dictation. You must be on an edit box:
+otherwise NVDA announces &ldquo;Please go to any edit box for dictation&rdquo; immediately and
+nothing is sent to the API. If no dictation has been recorded yet, NVDA announces
+&ldquo;No dictation found.&rdquo;</td>
+</tr>
+<tr>
+<td><kbd>u</kbd></td>
+<td>Announce the current status. While recording, NVDA announces &ldquo;Dictating...&rdquo;;
+while paused, &ldquo;Dictation paused.&rdquo;; while an operation is being processed
+(dictation, transcription, refining, emoji formatting or translation), the
+corresponding status (e.g. &ldquo;Transcribing...&rdquo;, &ldquo;Refining...&rdquo;) is announced;
+otherwise &ldquo;No operation running.&rdquo;</td>
+</tr>
+<tr>
+<td><kbd>i</kbd></td>
+<td>Open NVDA's settings dialog at the <strong>AI voice dictation</strong> category,
+ready to change API keys, model, language and processing options. If the settings
+dialog is already open, it is focused instead.</td>
+</tr>
+<tr>
+<td><kbd>h</kbd></td>
+<td>Open the <strong>AI voice dictation help</strong> window listing all the commands.
+The window has Copy (or Alt+C) and Close buttons, exactly like the &ldquo;Transcribed
+text&rdquo; window.</td>
+</tr>
+<tr>
+<td>any other key</td>
+<td>NVDA announces &ldquo;Not an AI voice dictation command, please try again.&rdquo;</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Settings</h2>
+
+<p>Available in NVDA Preferences &gt; Settings &gt; AI voice dictation:</p>
+
+<ul>
+<li><strong>Gemini API keys (separatable with comma):</strong> the Google Gemini API
+key(s) used for all operations.</li>
+<li><strong>Show API:</strong> when checked, the API key field is shown as plain text;
+when unchecked (default), it is masked like a password. Toggling this only changes
+whether the value is visible &mdash; the field stays in place and keeps its label.</li>
+<li><strong>Select dictation model:</strong> <em>dictation lite</em> (Gemini 3.5 Flash
+Lite) or <em>dictation flash</em> (Gemini 3.5 Flash).</li>
+<li><strong>Translate after dictation finishes:</strong> when checked, dictated text
+is translated to the selected target language. Unchecked by default.</li>
+<li><strong>Select target language:</strong> the language used for translation (100+
+languages).</li>
+<li><strong>AI processing after dictation completes:</strong> when checked (default),
+the dictated text is corrected for spelling and grammar.</li>
+<li><strong>Format dictated text with emojis:</strong> when checked, suitable emojis
+are added to the dictated text. Unchecked by default.</li>
+</ul>
+
+<h2>Contributions are welcomed</h2>
+<p>We warmly welcome contributions from everyone, whether you are fixing a bug,
+adding a new feature, improving documentation, or helping with translations.
+Every contribution &mdash; no matter how small &mdash; helps make AI voice
+dictation better for the whole community.</p>
+<p>If you encounter any issue while using the add-on, please report it by opening
+an issue on the project's GitHub repository. Include as much detail as you can
+&mdash; the steps to reproduce the problem, any error messages you saw, and your
+NVDA version &mdash; so that it can be resolved quickly. Thank you for helping us
+improve!</p>
+
+</body>
+</html>
