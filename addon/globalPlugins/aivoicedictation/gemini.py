@@ -13,14 +13,62 @@ import urllib.request
 #: Base URL of the Gemini API.
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
-#: Mapping from the settings choice to the Gemini model endpoint.
-MODEL_IDS = {
+#: Mapping from the legacy settings values to Gemini model IDs. Kept for
+#: backwards compatibility with configurations saved before the settings
+#: combo box started listing real model IDs ("flash" and "lite").
+LEGACY_MODEL_IDS = {
 	"lite": "gemini-3.5-flash-lite",
 	"flash": "gemini-3.5-flash",
 }
 
-#: Default model used if the configured value is unknown.
-DEFAULT_MODEL = "flash"
+#: Model used when the configured value is empty.
+DEFAULT_MODEL = "gemini-3.5-flash"
+
+#: Default model list shown in the settings combo box before the user fetches
+#: the latest models from the API. These are the current general-purpose
+#: text/audio models; the "Fetch models" button replaces this list with
+#: whatever the API reports.
+DEFAULT_MODELS = [
+	"gemini-3.7-flash",
+	"gemini-3.6-flash",
+	"gemini-3.5-flash",
+	"gemini-3.5-flash-lite",
+	"gemini-3.1-flash-lite",
+	"gemini-2.5-pro",
+	"gemini-2.5-flash",
+	"gemini-2.5-flash-lite",
+]
+
+#: Tokens that identify specialized models which do not produce general text
+#: output (image generation, speech synthesis, video, embeddings, agents
+#: etc.). They are filtered out of the fetched model list so the combo box
+#: only offers models usable for dictation, transcription and text
+#: processing.
+_EXCLUDED_MODEL_TOKENS = (
+	"-image",
+	"-tts",
+	"embedding",
+	"veo",
+	"lyria",
+	"robotics",
+	"computer-use",
+	"omni",
+	"live-translate",
+	"antigravity",
+	"deep-research",
+)
+
+
+def resolve_model(model):
+	"""Return the model ID to use for a stored settings value.
+
+	Legacy values ("flash", "lite") are mapped to their real model IDs;
+	every other value (including real model IDs) is passed through; an empty
+	value falls back to :data:`DEFAULT_MODEL`.
+	"""
+	if not model:
+		return DEFAULT_MODEL
+	return LEGACY_MODEL_IDS.get(model, model)
 
 #: MIME type for an audio file, guessed from its extension. Used when
 #: transcribing audio files selected in File Explorer.
@@ -201,6 +249,112 @@ def _post_json(url, payload, timeout=REQUEST_TIMEOUT):
 		)
 
 
+def _get_json(url, timeout=REQUEST_TIMEOUT):
+	"""GET a URL and return ``(status_code, body_bytes)``.
+
+	Like :func:`_post_json`, HTTP errors are returned as ``(status, body)``
+	and network level failures raise a :class:`GeminiAPIError` with the
+	``network`` category.
+	"""
+	request = urllib.request.Request(
+		url,
+		headers={"Content-Type": "application/json"},
+		method="GET",
+	)
+	try:
+		with _urlopen(request, timeout=timeout) as response:
+			return response.status, response.read()
+	except urllib.error.HTTPError as e:
+		try:
+			body = e.read()
+		except Exception:
+			body = b""
+		return e.code, body
+	except (urllib.error.URLError, TimeoutError, OSError) as e:
+		raise GeminiAPIError(
+			"Network error: %s" % e,
+			category="network",
+		)
+
+
+def _is_usable_model(model_id):
+	"""Return True if a model ID is a general-purpose text model."""
+	lower = model_id.lower()
+	return not any(token in lower for token in _EXCLUDED_MODEL_TOKENS)
+
+
+def _order_models(model_ids):
+	"""Order fetched model IDs: known current models first, then the rest.
+
+	The API returns models without a user friendly ordering, so the well
+	known current models are listed first (newest first) and any remaining
+	models are appended alphabetically.
+	"""
+	ordered = [model for model in DEFAULT_MODELS if model in model_ids]
+	rest = sorted(
+		set(model_ids) - set(ordered),
+	)
+	return ordered + rest
+
+
+def list_models(api_keys, timeout=REQUEST_TIMEOUT):
+	"""Fetch the IDs of all usable Gemini models for the given API keys.
+
+	Rotates through the API keys like every other request: if one key is
+	exhausted or fails, the next key is tried. Returns the model IDs that
+	support ``generateContent`` (text/audio) and are not specialized
+	generative models (image, TTS, video, embeddings, etc.), with the
+	well-known current models listed first.
+
+	:raises AllKeysFailedError: when no keys are configured or every key
+		failed. The ``last_error`` attribute carries the last failure.
+	"""
+	keys = [key.strip() for key in api_keys.split(",") if key.strip()]
+	if not keys:
+		raise AllKeysFailedError(None)
+	last_error = None
+	for index, key in enumerate(keys):
+		try:
+			return _list_models_with_key(key, timeout=timeout)
+		except GeminiAPIError as e:
+			last_error = e
+			if index < len(keys) - 1:
+				time.sleep(RETRY_DELAY)
+	raise AllKeysFailedError(last_error)
+
+
+def _list_models_with_key(key, timeout=REQUEST_TIMEOUT):
+	"""Fetch the model list with a single API key."""
+	url = "%s/models?key=%s" % (
+		API_BASE,
+		urllib.parse.quote(key, safe=""),
+	)
+	status, body = _get_json(url, timeout=timeout)
+	if status != 200:
+		raise _error_from_response(status, body)
+	try:
+		data = json.loads(body.decode("utf-8", errors="replace"))
+	except Exception:
+		raise GeminiAPIError(
+			"Invalid response from the Gemini API.",
+			status_code=status,
+			category="other",
+		)
+	model_ids = []
+	for model in data.get("models") or []:
+		name = model.get("name", "") or ""
+		if not name.startswith("models/"):
+			continue
+		model_id = name[len("models/"):]
+		methods = model.get("supportedGenerationMethods") or []
+		if "generateContent" not in methods:
+			continue
+		if not _is_usable_model(model_id):
+			continue
+		model_ids.append(model_id)
+	return _order_models(model_ids)
+
+
 def _error_from_response(status, body):
 	"""Build a :class:`GeminiAPIError` from an API error response."""
 	api_status = ""
@@ -282,7 +436,7 @@ class GeminiClient(object):
 			key.strip() for key in api_keys.split(",") if key.strip()
 		]
 		self.model = model
-		self.model_id = MODEL_IDS.get(model, MODEL_IDS[DEFAULT_MODEL])
+		self.model_id = resolve_model(model)
 
 	def transcribe(self, audio_bytes, mime_type="audio/wav"):
 		"""Transcribe microphone audio bytes into text.

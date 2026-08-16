@@ -52,8 +52,13 @@ maintained in Nepal.
 3. Paste your Gemini API key(s) into the **Gemini API keys (separatable with
    comma)** field. Multiple keys are separated with a comma, for example:
    `AIza...1111, AIza...2222`.
-4. Choose a dictation model: **dictation lite** (Gemini 3.5 Flash Lite) or
-   **dictation flash** (Gemini 3.5 Flash).
+4. Choose a dictation model from the **Select dictation model** combo box. The
+   box lists the latest general-purpose Gemini models (for example Gemini 3.7
+   Flash, Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 3.5 Flash Lite, Gemini
+   2.5 Pro and more). To get the exact, up-to-date list of models available
+   for your API keys, press the **Fetch models** button next to the combo box
+   — the box is then filled with the models the Gemini API reports, and the
+   fetched list is saved.
 5. Optionally choose a target language and enable translation / AI processing /
    emoji formatting.
 6. Press OK.
@@ -92,8 +97,16 @@ Available in NVDA Preferences > Settings > AI voice dictation:
 - **Show API:** when checked, the API key field is shown as plain text; when
   unchecked (default), it is masked like a password. Toggling this only changes
   whether the value is visible — the field stays in place and keeps its label.
-- **Select dictation model:** *dictation lite* (Gemini 3.5 Flash Lite) or
-  *dictation flash* (Gemini 3.5 Flash).
+- **Select dictation model:** lists the latest Gemini models (e.g. Gemini 3.7
+  Flash, Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 3.5 Flash Lite, Gemini
+  2.5 Pro, ...). The selected model is used for every operation (dictation,
+  audio transcription, refining, emoji formatting and translation).
+- **Fetch models:** a button next to the model combo box. It fetches the latest
+  models from the Gemini API using the API keys in the field above, fills the
+  combo box with them and saves the fetched list. The keys do not need to be
+  saved yet — the ones currently typed are used. While fetching, the button is
+  disabled and re-enabled when done; if the fetch fails (e.g. exhausted or
+  invalid keys, no connection) a message explains why.
 - **Translate after dictation finishes:** when checked, dictated text is
   translated to the selected target language. Unchecked by default.
 - **Select target language:** the language used for translation (100+ languages).

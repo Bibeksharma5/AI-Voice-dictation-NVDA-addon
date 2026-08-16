@@ -50,7 +50,8 @@ class GeminiClientTest(unittest.TestCase):
 		self.assertEqual(client.api_keys, ["key1", "key2", "key3"])
 		self.assertEqual(client.model_id, "gemini-3.5-flash")
 
-	def test_model_mapping(self):
+	def test_model_resolution(self):
+		# Legacy settings values still map to their real model IDs.
 		self.assertEqual(
 			gemini.GeminiClient("k", "lite").model_id,
 			"gemini-3.5-flash-lite",
@@ -59,11 +60,24 @@ class GeminiClientTest(unittest.TestCase):
 			gemini.GeminiClient("k", "flash").model_id,
 			"gemini-3.5-flash",
 		)
-		# Unknown model falls back to flash.
+		# Real model IDs pass through untouched.
 		self.assertEqual(
-			gemini.GeminiClient("k", "bogus").model_id,
-			"gemini-3.5-flash",
+			gemini.GeminiClient("k", "gemini-3.7-flash").model_id,
+			"gemini-3.7-flash",
 		)
+		self.assertEqual(
+			gemini.GeminiClient("k", "gemini-2.5-pro").model_id,
+			"gemini-2.5-pro",
+		)
+		# An empty value falls back to the default model.
+		self.assertEqual(
+			gemini.GeminiClient("k", "").model_id,
+			gemini.DEFAULT_MODEL,
+		)
+		self.assertEqual(gemini.resolve_model("flash"), "gemini-3.5-flash")
+		self.assertEqual(gemini.resolve_model("lite"), "gemini-3.5-flash-lite")
+		self.assertEqual(gemini.resolve_model("gemini-3.7-flash"), "gemini-3.7-flash")
+		self.assertEqual(gemini.resolve_model(""), gemini.DEFAULT_MODEL)
 
 	def test_no_keys_raises_immediately(self):
 		client = gemini.GeminiClient("", "flash")
@@ -260,6 +274,128 @@ class GeminiClientTest(unittest.TestCase):
 		with self.assertRaises(gemini.AllKeysFailedError) as ctx:
 			client.refine("hello")
 		self.assertEqual(ctx.exception.last_error.category, "not_found")
+
+
+class FakeGetter(object):
+	"""Replaces gemini._get_json with scripted responses."""
+
+	def __init__(self, responses):
+		self.responses = list(responses)
+		self.calls = []
+		self.last_url = None
+
+	def __call__(self, url, timeout=None):
+		self.calls.append(url)
+		self.last_url = url
+		status, body = self.responses.pop(0)
+		return status, body
+
+
+def _models_body(*models):
+	"""Build a models endpoint response from ``(name, methods)`` tuples."""
+	entries = [
+		{
+			"name": "models/%s" % name,
+			"supportedGenerationMethods": methods,
+		}
+		for name, methods in models
+	]
+	return json.dumps({"models": entries}).encode("utf-8")
+
+
+class ListModelsTest(unittest.TestCase):
+
+	def test_fetches_and_filters_models(self):
+		getter = FakeGetter(
+			[
+				(
+					200,
+					_models_body(
+						("gemini-3.7-flash", ["generateContent"]),
+						("gemini-2.5-pro", ["generateContent"]),
+						("gemini-3.1-flash-lite-image", ["generateImages"]),
+						# Supports generateContent but is a TTS model: still
+						# filtered out by its name.
+						("gemini-2.5-flash-preview-tts", ["generateContent"]),
+						("gemini-embedding-2-preview", ["embedContent"]),
+					),
+				),
+			]
+		)
+		gemini._get_json = getter
+		models = gemini.list_models("key1")
+		self.assertIn("key=key1", getter.last_url)
+		# Only generateContent text models survive; specialized ones are
+		# filtered out and the known models come first.
+		self.assertEqual(models, ["gemini-3.7-flash", "gemini-2.5-pro"])
+
+	def test_no_keys_raises_immediately(self):
+		with self.assertRaises(gemini.AllKeysFailedError) as ctx:
+			gemini.list_models(" , ")
+		self.assertIsNone(ctx.exception.last_error)
+
+	def test_rotation_on_exhausted(self):
+		exhausted = 429, json.dumps(
+			{"error": {"status": "RESOURCE_EXHAUSTED", "message": "quota"}}
+		).encode("utf-8")
+		getter = FakeGetter(
+			[
+				exhausted,
+				(
+					200,
+					_models_body(("gemini-3.6-flash", ["generateContent"])),
+				),
+			]
+		)
+		gemini._get_json = getter
+		models = gemini.list_models("key1,key2")
+		self.assertEqual(models, ["gemini-3.6-flash"])
+		self.assertEqual(len(getter.calls), 2)
+		self.assertIn("key=key1", getter.calls[0])
+		self.assertIn("key=key2", getter.calls[1])
+
+	def test_all_keys_failed_reports_last_error(self):
+		exhausted = 429, json.dumps(
+			{"error": {"status": "RESOURCE_EXHAUSTED", "message": "quota"}}
+		).encode("utf-8")
+		getter = FakeGetter([exhausted, exhausted])
+		gemini._get_json = getter
+		with self.assertRaises(gemini.AllKeysFailedError) as ctx:
+			gemini.list_models("key1,key2")
+		self.assertEqual(ctx.exception.last_error.category, "exhausted")
+		self.assertEqual(len(getter.calls), 2)
+
+	def test_http_error_raises(self):
+		body = json.dumps(
+			{"error": {"status": "API_KEY_INVALID", "message": "API key not valid."}}
+		).encode("utf-8")
+		getter = FakeGetter([(400, body)])
+		gemini._get_json = getter
+		with self.assertRaises(gemini.AllKeysFailedError) as ctx:
+			gemini.list_models("key1")
+		self.assertEqual(ctx.exception.last_error.category, "invalid_key")
+
+	def test_unknown_models_appended_after_defaults(self):
+		getter = FakeGetter(
+			[
+				(
+					200,
+					_models_body(
+						("gemini-2.5-flash-lite", ["generateContent"]),
+						("gemini-future-1", ["generateContent"]),
+						("gemini-3.7-flash", ["generateContent"]),
+					),
+				),
+			]
+		)
+		gemini._get_json = getter
+		models = gemini.list_models("key1")
+		# Known models first (in the default order), then unknown ones sorted.
+		self.assertEqual(
+			models,
+			["gemini-3.7-flash", "gemini-2.5-flash-lite", "gemini-future-1"],
+		)
+
 
 
 if __name__ == "__main__":

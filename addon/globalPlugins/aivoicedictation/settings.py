@@ -9,7 +9,8 @@ CONF_SECTION = "aivoicedictation"
 confspec = {
 	"apiKeys": 'string(default="")',
 	"showApi": "boolean(default=false)",
-	"model": 'string(default="flash")',
+	"model": 'string(default="gemini-3.5-flash")',
+	"modelsList": 'string(default="")',
 	"translateAfterDictation": "boolean(default=false)",
 	"targetLanguage": 'string(default="English")',
 	"aiProcessing": "boolean(default=true)",
@@ -20,7 +21,8 @@ confspec = {
 DEFAULTS = {
 	"apiKeys": "",
 	"showApi": False,
-	"model": "flash",
+	"model": "gemini-3.5-flash",
+	"modelsList": "",
 	"translateAfterDictation": False,
 	"targetLanguage": "English",
 	"aiProcessing": True,
